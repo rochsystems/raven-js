@@ -15,12 +15,14 @@ function flushRavenState() {
         includePaths: [],
         crossOrigin: 'anonymous',
         collectWindowErrors: true,
-        maxMessageLength: 100
+        maxMessageLength: 100,
+        stackTraceLimit: Infinity
     },
     startTime = 0;
     ravenNotConfiguredError = undefined;
     originalConsole = window.console || {};
     originalConsoleMethods = {};
+    originalErrorStackTraceLimit = Error.stackTraceLimit;
 
     for (var method in originalConsole) {
       originalConsoleMethods[method] = originalConsole[method];
@@ -1551,6 +1553,29 @@ describe('globals', function() {
             assert.isFalse(window.normalizeFrame.called);
             assert.deepEqual(window.processException.lastCall.args, [
                 'new <anonymous>', 'hey', 'http://example.com', 10, [], undefined
+            ]);
+        });
+
+        it('should trim number of frames based on stackTraceLimit', function() {
+            var frame = {url: 'http://example.com'};
+            this.sinon.stub(window, 'normalizeFrame').returns(frame);
+            this.sinon.stub(window, 'processException');
+
+            var stackInfo = {
+                name: 'Matt',
+                message: 'hey',
+                url: 'http://example.com',
+                lineno: 10,
+                stack: [
+                  frame, frame
+                ]
+            };
+
+            globalOptions.stackTraceLimit = 1;
+
+            handleStackInfo(stackInfo);
+            assert.deepEqual(window.processException.lastCall.args, [
+                'Matt', 'hey', 'http://example.com', 10, [frame], undefined
             ]);
         });
     });

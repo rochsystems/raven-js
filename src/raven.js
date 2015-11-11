@@ -21,7 +21,8 @@ var _Raven = window.Raven,
         includePaths: [],
         crossOrigin: 'anonymous',
         collectWindowErrors: true,
-        maxMessageLength: 100
+        maxMessageLength: 100,
+        stackTraceLimit: Infinity
     },
     isRavenInstalled = false,
     objectPrototype = Object.prototype,
@@ -29,6 +30,7 @@ var _Raven = window.Raven,
     // before the console plugin has a chance to monkey patch
     originalConsole = window.console || {},
     originalConsoleMethods = {},
+    originalErrorStackTraceLimit = Error.stackTraceLimit,
     plugins = [],
     startTime = now();
 
@@ -143,6 +145,8 @@ var Raven = {
             isRavenInstalled = true;
         }
 
+        Error.stackTraceLimit = globalOptions.stackTraceLimit;
+
         return Raven;
     },
 
@@ -235,6 +239,7 @@ var Raven = {
      */
     uninstall: function() {
         TraceKit.report.uninstall();
+        Error.stackTraceLimit = originalErrorStackTraceLimit;
         isRavenInstalled = false;
 
         return Raven;
@@ -589,7 +594,7 @@ function handleStackInfo(stackInfo, options) {
         stackInfo.message,
         stackInfo.url,
         stackInfo.lineno,
-        frames,
+        frames.slice(0, globalOptions.stackTraceLimit),
         options
     );
 }
